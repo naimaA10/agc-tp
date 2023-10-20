@@ -144,21 +144,23 @@ def abundance_greedy_clustering(amplicon_file: Path, minseqlen: int, mincount: i
     :param kmer_size: (int) A fournir mais non utilise cette annee
     :return: (list) A list of all the [OTU (str), count (int)] .
     """
-
-    #(list)[sequences, count] dans ordre décroissant
-    #(list)[OTU (str), count (int)]
     OTU = []
     f = dereplication_fulllength(amplicon_file, minseqlen, mincount)
-    OTU.append(next(f)) #next car générateur
+    OTU.append(next(f))
+    #try:
+    #    OTU.append(next(f))
+    #except StopIteration:
+    #    print("Aucune séquence ne satisfait aux seuils spécifiés.")
+    #    return OTU
 
     for seq_count in f:
-        ajoute = False  
+        ajoute = False
         for sequence, count in OTU:
             if count > seq_count[1]:
                 align = nw.global_align(seq_count[0], sequence, gap_open=-1, gap_extend=-1, matrix=str(Path(__file__).parent / "MATCH"))
                 if get_identity(align) <= 97:
                     ajoute = True
-        if ajoute :
+        if ajoute:
             OTU.append(seq_count)
     return OTU
 
@@ -186,25 +188,23 @@ def main(): # pragma: no cover
     # Get arguments
     args = get_arguments()
     # Votre programme ici
-    file = args.amplicon_file
-    lenmin = args.minseqlen
-    min_count = args.mincount
-    outputfile = args.output_file
+    
+    print("La déduplication...")
+    dereplicated_seqs = dereplication_fulllength(args.amplicon_file, args.minseqlen, args.mincount)
+    #print("Séquences dédoublonnées :")
+    #for seq in dereplicated_seqs:
+    #    print(seq)
 
-    #print(f"file {args.amplicon_file}\nminseqlen {args.minseqlen}")
+    print("Le regroupement glouton...")
+    otu_list = abundance_greedy_clustering(args.amplicon_file, args.minseqlen, args.mincount, 0, 0)
+    print("Séquences OTU :")
+    for seq in otu_list:
+        print(seq)
 
-    #1
-    #print(read_fasta(file,lenmin))
-    #for i in read_fasta(file,lenmin):
-    #   print(i)
 
-    #3
-    np.int = int 
-    align = nw.global_align("ATTATATCGCCCG", "ATTCGCGCGATATC", gap_open=-1, gap_extend=-1, matrix=str(Path(__file__).parent / "MATCH"))
-    print(align)
-   # for i in abundance_greedy_clustering(file, lenmin, min_count, 0, 0):
-   #     print(i)
-
+    print("Écriture des OTUs dans un fichier de sortie...")
+    write_OTU(otu_list, args.output_file)
+    print("OTUs écrits dans", args.output_file)
 
 if __name__ == '__main__':
     main()
